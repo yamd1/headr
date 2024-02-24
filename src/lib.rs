@@ -20,7 +20,6 @@ pub fn get_args() -> MyResult<Config> {
                 .value_name("LINES")
                 .short('n')
                 .long("lines")
-                .value_parser(parse_positive_int)
                 .default_value("10"),
         )
         .arg(
@@ -28,7 +27,6 @@ pub fn get_args() -> MyResult<Config> {
                 .value_name("BYTES")
                 .short('c')
                 .long("bytes")
-                .value_parser(parse_positive_int)
                 .conflicts_with("lines"),
         )
         .arg(
@@ -47,19 +45,20 @@ pub fn get_args() -> MyResult<Config> {
         .collect();
 
     let lines = matches
-        .try_get_one::<usize>("lines")
-        .map_err(|e| format!("\n\n\nillegal line count -- {}", e))?
-        .expect("default")
-        .to_owned();
+        .get_one::<String>("lines")
+        .map(|v| parse_positive_int(v))
+        .transpose()
+        .map_err(|e| format!("illegal line count -- {}", e))?;
 
     let bytes = matches
-        .try_get_one::<usize>("bytes")
-        .map_err(|e| format!("\n\n\nillegal byte count -- {}", e))?
-        .map(|v| v.to_owned());
+        .get_one::<String>("bytes")
+        .map(|v| parse_positive_int(v))
+        .transpose()
+        .map_err(|e| format!("illegal byte count -- {}", e))?;
 
     Ok(Config {
         files,
-        lines,
+        lines: lines.expect("default").to_owned(),
         bytes,
     })
 }
