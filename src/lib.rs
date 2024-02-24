@@ -1,5 +1,6 @@
 use clap::{Arg, ArgAction, Command};
 use std::{
+    borrow::Borrow,
     error::Error,
     fmt::Debug,
     fs::File,
@@ -72,9 +73,15 @@ pub fn run(config: Config) -> MyResult<()> {
     for filename in config.files {
         match open(&filename) {
             Err(err) => eprintln!("{}: {}", filename, err),
-            Ok(file) => {
-                for line in file.lines().take(config.lines) {
-                    println!("{}", line?);
+            Ok(mut file) => {
+                let mut line = String::new();
+                for _ in 0..config.lines {
+                    let bytes = file.read_line(&mut line)?;
+                    if bytes == 0 {
+                        break;
+                    }
+                    print!("{}", line);
+                    line.clear();
                 }
             }
         }
