@@ -1,7 +1,7 @@
 use clap::{Arg, ArgAction, Command};
-use std::error::Error;
+use std::{error::Error, fmt::Debug};
 
-type MyResult<T> = Result<T, Box<dyn Error>>;
+type MyResult<T> = Result<T, Box<dyn Error + Send + Sync + 'static>>;
 
 #[derive(Debug)]
 pub struct Config {
@@ -19,8 +19,8 @@ pub fn get_args() -> MyResult<Config> {
             Arg::new("lines")
                 .value_name("LINES")
                 .short('n')
-                .long("liens")
-                .value_parser(clap::value_parser!(usize))
+                .long("lines")
+                .value_parser(parse_positive_int)
                 .default_value("10"),
         )
         .arg(
@@ -28,7 +28,7 @@ pub fn get_args() -> MyResult<Config> {
                 .value_name("BYTES")
                 .short('c')
                 .long("bytes")
-                .value_parser(clap::value_parser!(usize))
+                .value_parser(parse_positive_int)
                 .conflicts_with("lines"),
         )
         .arg(
@@ -46,10 +46,21 @@ pub fn get_args() -> MyResult<Config> {
         .map(|v| v.to_owned())
         .collect();
 
+    let lines = matches
+        .try_get_one::<usize>("lines")
+        .map_err(|e| format!("\n\n\nillegal line count -- {}", e))?
+        .expect("default")
+        .to_owned();
+
+    let bytes = matches
+        .try_get_one::<usize>("bytes")
+        .map_err(|e| format!("\n\n\nillegal byte count -- {}", e))?
+        .map(|v| v.to_owned());
+
     Ok(Config {
         files,
-        lines: *matches.get_one::<usize>("lines").expect("default"),
-        bytes: matches.get_one::<usize>("bytes").copied(),
+        lines,
+        bytes,
     })
 }
 
